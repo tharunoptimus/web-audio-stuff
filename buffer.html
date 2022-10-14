@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Document</title>
+
+		<style>
+			body {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+				height: 100vh;
+				margin: 0;
+			}
+			.wrapper {
+				border: 1px solid #44444444;
+				width: 400px;
+				border-radius: 18px;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+			}
+			button {
+				padding: 1rem;
+				margin: 1rem;
+				font-size: 1.5rem;
+				border: none;
+				border-radius: 0.5rem;
+				color: #ffffff;
+				background-color: #0070f3;
+				cursor: pointer;
+			}
+			button.disabled {
+				background-color: #0070f382;
+				cursor: not-allowed;
+			}
+			.timeElapsed,
+			.endNote {
+				font-size: 2rem;
+				font-weight: 600;
+				color: #0070f3;
+				font-family: system-ui, -apple-system, BlinkMacSystemFont,
+					"Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans",
+					"Helvetica Neue", sans-serif;
+				text-align: center;
+			}
+			.endNote {
+				color: #d35400;
+				display: none;
+			}
+		</style>
+	</head>
+
+	<body>
+		<div class="wrapper">
+			<p class="timeElapsed">Click button to start.</p>
+			<button type="button" id="recordButton">Record</button>
+			<p class="endNote">Close tab to stop</p>
+		</div>
+
+		<script>
+			let timePrint = document.querySelector(".timeElapsed")
+			let arr = []
+
+			function record() {
+				let startTime = Date.now()
+				let timeElapsed = 0
+				let timer = setInterval(function () {
+					timeElapsed = (Date.now() - startTime) / 1000
+					timePrint.innerHTML = `${timeElapsed.toFixed(2)}s`
+				}, 0)
+			}
+
+			const handleSuccess = function (stream) {
+				const context = new AudioContext()
+				const source = context.createMediaStreamSource(stream)
+				const processor = context.createScriptProcessor(4096, 1, 1)
+
+				source.connect(processor)
+				processor.connect(context.destination)
+
+				processor.onaudioprocess = function (e) {
+					arr.push(e.inputBuffer.getChannelData(0))
+
+					if (arr.length > 50) {
+						let blob = new Blob(arr, {
+							type: "audio/wav",
+						})
+						let url = URL.createObjectURL(blob)
+						let a = document.createElement("a")
+						a.href = url
+						a.download = "audio.wav"
+						a.click()
+						arr = []
+					}
+				}
+			}
+
+			document
+				.getElementById("recordButton")
+				.addEventListener("click", async (e) => {
+					await navigator.mediaDevices
+						.getUserMedia({ audio: true, video: false })
+						.then(handleSuccess)
+					record()
+
+					e.target.classList.add("disabled")
+					e.target.parentNode.querySelector(
+						".endNote"
+					).style.display = "block"
+				})
+		</script>
+	</body>
+</html>
